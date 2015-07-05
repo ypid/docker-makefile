@@ -52,9 +52,9 @@ snapshots:
 stop-all:
 	docker stop `docker ps -q`
 
-install-images:
-	docker pull jwilder/docker-gen
-	# Updates not needed/wanted
+# install-images:
+#     docker pull jwilder/docker-gen
+#     # Updates not needed/wanted
 
 .PHONY: apt-cacher-ng FORCE_MAKE
 apt-cacher-ng:
@@ -159,7 +159,7 @@ bittorrent:
 	docker run -it \
 		--name "$@" \
 		-e "TZ=Europe/Berlin" \
-		-e 'VIRTUAL_PATH=~rs/bittorrent' \
+		-e 'VIRTUAL_PATH=~user_a/bittorrent' \
 		-e 'VIRTUAL_SERVER_TYPE=rutorrent' \
 		-p 45566:45566 \
 		-p 9527:9527/udp \
@@ -172,9 +172,45 @@ bittorrent:
 		# -p 801:80 \
 ## }}}
 
+## ejabberd {{{
+ejabberd-example:
+	# -@docker rm -v -f "$@"
+	-@docker rm -f "$@"
+	# snapper -c jabber-db create -d 'Make jabber.'
+	docker run -d \
+		--name "$@" \
+		-p 5222:5222 \
+		-p 5269:5269 \
+		-p 5280:5280 \
+		-v /etc/ssl/$(FQDN).pem:/opt/ejabberd/ssl/host.pem:ro \
+		-v /etc/ssl/$(FQDN).pem:/opt/ejabberd/ssl/$(FQDN).pem:ro \
+		-v /etc/ejabberd/ejabberd.yml.tpl:/opt/ejabberd/conf/ejabberd.yml.tpl:ro \
+		-v /srv/jabber/db:/opt/ejabberd/database/ejabberd \
+		-h '$(FQDN)' \
+		-e "ERLANG_NODE=ejabberd" \
+		-e "XMPP_DOMAIN=$(FQDN)" \
+		-e "EJABBERD_ADMIN=admin@$(FQDN) admin2@$(FQDN)" \
+		-e "TZ=Europe/Berlin" \
+		$(image_ejabberd)
+## }}}
+
+## openvpn {{{
+.PHONY: openvpn-gateway
+openvpn-gateway-example:
+	-@docker rm -f "$@"
+	docker run -d \
+		--name "$@" \
+		-v /etc/openvpn/example-gateway:/etc/openvpn:ro \
+		-p 1194:1194/udp \
+		-e RUNNING=yes \
+		-e "TZ=Europe/Berlin" \
+		--cap-add=NET_ADMIN \
+		$(image_openvpn)
+## }}}
+
 ## owncloud {{{
-.PHONY: owncloud-demo
-owncloud-demo:
+.PHONY: owncloud-example
+owncloud-example:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
