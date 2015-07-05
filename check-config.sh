@@ -1,0 +1,1 @@
+/usr/share/docker.io/contrib/check-config.sh
