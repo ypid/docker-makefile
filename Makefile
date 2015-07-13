@@ -208,6 +208,15 @@ openvpn-gateway-example:
 		$(image_openvpn)
 ## }}}
 
+## nginx-reverse-reload {{{
+.PHONY: nginx-reverse-reload
+nginx-reverse-reload:
+	docker restart nginx-gen
+	# docker kill -s HUP nginx-reverse
+	docker stop nginx-gen
+	docker restart nginx-reverse
+## }}}
+
 ## owncloud {{{
 .PHONY: owncloud-example
 owncloud-example:
@@ -216,14 +225,15 @@ owncloud-example:
 		--name "$@" \
 		-h "$(FQDN)" \
 		--link owncloud-db:db \
-		-v /srv/rs/owncloud/data:/var/www/owncloud/data \
-		-v /srv/rs/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
-		-v /srv/rs/owncloud/config.php:/owncloud/config.php \
-		-e 'VIRTUAL_PATH=~rs/owncloud' \
+		-v /srv/example/owncloud/data:/var/www/owncloud/data \
+		-v /srv/example/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
+		-v /srv/example/owncloud/config.php:/owncloud/config.php \
+		-e 'VIRTUAL_PATH=~example/owncloud' \
 		-e 'VIRTUAL_SERVER_TYPE=owncloud' \
 		-e 'VIRTUAL_PORT=80' \
 		-e "TZ=Europe/Berlin" \
 		$(image_owncloud)
+	$(MAKE) nginx-reverse-reload
 # "apps_paths" => array (
 #   0 => array (
 #     "path"     => OC::$SERVERROOT."/apps",
@@ -238,3 +248,41 @@ owncloud-example:
 # ),
 # cd /var/www/ && mkdir '~user_a'&& ln -s ../owncloud '~user_a/'
 ## }}}
+
+## seafile {{{
+
+.PHONY: seafile-example-db
+seafile-example-db:
+	-@docker rm -f "$@"
+	snapper -c seafile-example-db create -d 'Make seafile-example-db.'
+	docker run -d \
+		--name "$@" \
+		-e MYSQL_ROOT_PASSWORD=pw \
+		-e MYSQL_USER=seafile-user \
+		-e MYSQL_DATABASE=seafile-example-db \
+		-e MYSQL_PASSWORD=pw2 \
+		-e "TZ=Europe/Berlin" \
+		-v /srv/example/seafile/db:/var/lib/mysql \
+		mysql
+
+.PHONY: seafile-example
+seafile-example:
+	-docker rm -f "$@"
+	docker run -d \
+		--name "$@" \
+		-e "TZ=Europe/Berlin" \
+		-p 10002:10002 \
+		-p 12002:12002 \
+		-v "/srv/example/seafile/data:/opt/seafile" \
+		--link seafile-example-db:db \
+		-e "DB_ENV_MYSQL_USER=overwrite" \
+		-e "DB_ENV_MYSQL_PASSWORD=overwrite" \
+		-e "DB_ENV_MYSQL_DATABASE=overwrite" \
+		-e "DB_ENV_MYSQL_ROOT_PASSWORD=overwrite" \
+		-e 'VIRTUAL_PATH=example' \
+		-e 'VIRTUAL_PORT=8000' \
+		-e 'VIRTUAL_SERVER_TYPE=seafile' \
+		-e fastcgi=true \
+		-e autostart=true \
+		$(image_seafile)
+	$(MAKE) nginx-reverse-reload
