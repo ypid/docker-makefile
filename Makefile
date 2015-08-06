@@ -14,34 +14,26 @@
 ## You should have received a copy of the GNU Affero General Public License
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ARGS ?= ''
-FQDN ?= 'example.com'
-SHELL   ?= /bin/bash
+ARGS     ?= ''
+FQDN     ?= 'example.com'
+SHELL    ?= /bin/bash
 conf_dir ?= /etc/docker
 DOCKER_BUILD_OPTIONS ?= --no-cache
 docker_build_dir ?= /var/srv/docker
 docker_build_debian_version ?= jessie
 docker_build_debian_additional_programs ?= ,rename,iproute2
 
-# image_openvpn ?= localbuild/openvpn
-image_openvpn ?= localbuild/openvpn_new
-# image_tor_server ?= patrickod/docker-tor_localbuild
-image_tor_server ?= localbuild/tor-server_debian
-image_postgres ?= localbuild/postgres
-# image_owncloud ?= localbuild/owncloud_ubuntu
-# image_owncloud ?= localbuild/owncloud_debian
-image_owncloud ?= localbuild/owncloud_debian_new
-image_seafile ?= localbuild/seafile
-# image_nginx_php ?= localbuild/phpnginx
-# image_nginx_php ?= zolweb/docker-phpnginx
-image_nginx_php ?= maxexcloo/nginx-php
-image_freeswitch ?= localbuild/freeswitch
-image_ejabberd ?= localbuild/ejabberd
-image_chatbot_err ?= localbuild/chatbot_err
-# image_chatbot_program_o ?= localbuild/program_o
+image_tor_server        ?= localbuild/tor
+image_postgres          ?= localbuild/postgres
+image_owncloud          ?= localbuild/owncloud
+image_seafile           ?= localbuild/seafile
+image_nginx_php         ?= localbuild/phpnginx
+image_freeswitch        ?= localbuild/freeswitch
+image_ejabberd          ?= localbuild/ejabberd
+image_chatbot_err       ?= localbuild/chatbot_err
 image_chatbot_program_o ?= localbuild/chatbot_program_o
-image_chatbot_howie ?= localbuild/chatbot_howie
-image_bittorrent ?= localbuild/bittorrent
+image_chatbot_howie     ?= localbuild/chatbot_howie
+image_bittorrent        ?= localbuild/bittorrent
 
 default:
 	echo See Makefile
@@ -72,7 +64,6 @@ build-debian-base-image: apt-cacher-ng
 	docker tag --force $$id debian:$(docker_build_debian_version)
 
 upgrade-debian-base-image: build-debian-base-image
-	# cd /var/srv/docker/docker-32bit-debian/ && ./upgrade-image.sh
 
 ## build {{{
 .PHONY: build-image-tor
@@ -195,7 +186,7 @@ ejabberd-example:
 ## }}}
 
 ## openvpn {{{
-.PHONY: openvpn-gateway
+.PHONY: openvpn-gateway-example
 openvpn-gateway-example:
 	-@docker rm -f "$@"
 	docker run -d \
