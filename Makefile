@@ -58,11 +58,11 @@ stop-all:
 
 .PHONY: apt-cacher-ng FORCE_MAKE
 apt-cacher-ng:
-	@(echo "Acquire::http::Proxy \"$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)\"; };"; \
+	@(echo "Acquire::http::Proxy \"$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)\";"; \
 	echo "Acquire::https::Proxy \"false\";") > "$@"
 
 build-debian-base-image: apt-cacher-ng
-	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)/http.debian.net/debian"
+	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) --no-compression --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)/http.debian.net/debian"
 	@image=`docker images | egrep 'localbuild/debian\s+$(docker_build_debian_version)'`; \
 	echo $$image; \
 	id="`echo $$image | awk '{ print $$3 }'`"; \
