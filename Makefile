@@ -26,6 +26,7 @@ docker_build_debian_additional_programs ?= ,rename,iproute2
 image_tor_server        ?= localbuild/tor
 image_postgres          ?= localbuild/postgres
 image_owncloud          ?= localbuild/owncloud
+image_openvpn           ?= localbuild/openvpn
 image_seafile           ?= localbuild/seafile
 image_nginx_php         ?= localbuild/phpnginx
 image_freeswitch        ?= localbuild/freeswitch
@@ -201,11 +202,11 @@ openvpn-gateway-example:
 
 ## nginx-reverse-reload {{{
 .PHONY: nginx-reverse-reload
-nginx-reverse-reload:
+nginx-reverse-reload: nginx-gen
 	docker restart nginx-gen
-	# docker kill -s HUP nginx-reverse
 	docker stop nginx-gen
-	docker restart nginx-reverse
+	# docker restart nginx-reverse
+	docker kill --signal HUP nginx-reverse
 ## }}}
 
 ## owncloud {{{
