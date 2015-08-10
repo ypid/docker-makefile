@@ -81,6 +81,16 @@ nameserver 8.8.8.8
 nameserver 8.8.4.4
 EOF
 
+## Overwrite proxy stuff which was setup by debootstrap.
+cat > "$rootfsDir/etc/apt/sources.list" <<'EOF'
+deb http://http.debian.net/debian jessie main
+deb http://http.debian.net/debian jessie-updates main
+deb http://security.debian.org jessie/updates main
+EOF
+
+## Setup new proxy using apt variables.
+cp apt-cacher-ng "$rootfsDir/etc/apt/apt.conf"
+
 tarFile="$dir/rootfs.tar${compression:+.$compression}"
 touch "$tarFile"
 
