@@ -40,10 +40,17 @@ default:
 	echo See Makefile
 
 snapshots:
-	for i in /etc/snapper/configs/*; do snapper -c "`basename $i`" create -d 'Created by Makefile for docker'; done
+	for i in /etc/snapper/configs/*; do snapper --config "`basename $i`" create --description 'Created by Makefile for docker'; done
 
 stop-all:
-	docker stop `docker ps -q`
+	docker stop `docker ps --quiet`
+
+## https://www.calazan.com/docker-cleanup-commands/
+remove-all-stopped-containers:
+	-docker rm --force=false $(shell docker ps --all --quiet) 2> /dev/null
+
+remove-all-dangling-images:
+	-docker rmi --force=false $(shell docker images --quiet --filter 'dangling=true')
 
 # install-images:
 #     docker pull jwilder/docker-gen
@@ -56,13 +63,14 @@ apt-cacher-ng:
 
 build-debian-base-image: apt-cacher-ng
 	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) --no-compression --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)/http.debian.net/debian"
-	@image=`docker images | egrep 'localbuild/debian\s+$(docker_build_debian_version)'`; \
+	@image=`docker images | grep 'localbuild/debian\s+$(docker_build_debian_version)' | head --lines 1`; \
 	echo $$image; \
 	id="`echo $$image | awk '{ print $$3 }'`"; \
 	docker tag --force $$id debian:latest; \
 	docker tag --force $$id debian:8; \
-	docker tag --force $$id debian:8.0; \
+	docker tag --force $$id debian:8.1; \
 	docker tag --force $$id debian:$(docker_build_debian_version)
+	rm -rf "$(docker_build_dir)/"*
 
 upgrade-debian-base-image: build-debian-base-image
 
@@ -122,26 +130,26 @@ tor-relay:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		-v /etc/tor/relay/torrc:/etc/tor/torrc \
-		-v /srv/tor:/var/lib/tor \
-		-e "TZ=Europe/Berlin" \
-		-p 993:993 \
-		-p 465:465 \
+		--volume /etc/tor/relay/torrc:/etc/tor/torrc \
+		--volume /srv/tor:/var/lib/tor \
+		--env "TZ=Europe/Berlin" \
+		--publish 993:993 \
+		--publish 465:465 \
 		$(image_tor_server) \
 		/usr/bin/tor -f /etc/tor/torrc
-		# -v /srv/tor:/var/lib/tor \
+		# --volume /srv/tor:/var/lib/tor \
 
 tor-hidden-services:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		-v /etc/tor/hidden_services:/etc/tor \
-		-v /srv/tor_hidden_service:/var/lib/tor \
+		--volume /etc/tor/hidden_services:/etc/tor \
+		--volume /srv/tor_hidden_service:/var/lib/tor \
 		--publish-all=false \
-		-e "TZ=Europe/Berlin" \
+		--env "TZ=Europe/Berlin" \
 		$(image_tor_server) \
 		/usr/bin/tor -f /etc/tor/torrc
-		# -v /srv/tor:/var/lib/tor \
+		# --volume /srv/tor:/var/lib/tor \
 ## }}}
 
 ## Bittorrent {{{
@@ -150,39 +158,39 @@ bittorrent:
 	-@docker rm -f "$@"
 	docker run -it \
 		--name "$@" \
-		-e "TZ=Europe/Berlin" \
-		-e 'VIRTUAL_PATH=~user_a/bittorrent' \
-		-e 'VIRTUAL_SERVER_TYPE=rutorrent' \
-		-p 45566:45566 \
-		-p 9527:9527/udp \
-		-v /srv/bittorrent:/rtorrent \
-		-v /etc/rtorrent/htpasswd:/etc/nginx/htpasswd:ro \
-		-v /etc/rtorrent/nginx:/etc/nginx/sites-available/default:ro \
-		-e UPLOAD_RATE=500 \
+		--env "TZ=Europe/Berlin" \
+		--env 'VIRTUAL_PATH=~user_a/bittorrent' \
+		--env 'VIRTUAL_SERVER_TYPE=rutorrent' \
+		--publish 45566:45566 \
+		--publish 9527:9527/udp \
+		--volume /srv/bittorrent:/rtorrent \
+		--volume /etc/rtorrent/htpasswd:/etc/nginx/htpasswd:ro \
+		--volume /etc/rtorrent/nginx:/etc/nginx/sites-available/default:ro \
+		--env UPLOAD_RATE=500 \
 		$(image_bittorrent)
-		# -v /etc/rtorrent/rtorrent.rc:/root/.rtorrent.rc \
-		# -p 801:80 \
+		# --volume /etc/rtorrent/rtorrent.rc:/root/.rtorrent.rc \
+		# --publish 801:80 \
 ## }}}
 
 ## ejabberd {{{
 ejabberd-example:
-	# -@docker rm -v -f "$@"
+	# -@docker rm --volume -f "$@"
 	-@docker rm -f "$@"
 	# snapper -c jabber-db create -d 'Make jabber.'
 	docker run -d \
 		--name "$@" \
-		-p 5222:5222 \
-		-p 5269:5269 \
-		-p 5280:5280 \
-		-v /etc/ssl/$(FQDN).pem:/opt/ejabberd/ssl/host.pem:ro \
-		-v /etc/ssl/$(FQDN).pem:/opt/ejabberd/ssl/$(FQDN).pem:ro \
-		-v /etc/ejabberd/ejabberd.yml.tpl:/opt/ejabberd/conf/ejabberd.yml.tpl:ro \
-		-v /srv/jabber/db:/opt/ejabberd/database/ejabberd \
-		-h '$(FQDN)' \
-		-e "ERLANG_NODE=ejabberd" \
-		-e "XMPP_DOMAIN=$(FQDN)" \
-		-e "EJABBERD_ADMIN=admin@$(FQDN) admin2@$(FQDN)" \
-		-e "TZ=Europe/Berlin" \
+		--publish 5222:5222 \
+		--publish 5269:5269 \
+		--publish 5280:5280 \
+		--volume /etc/ssl/$(FQDN).pem:/opt/ejabberd/ssl/host.pem:ro \
+		--volume /etc/ssl/$(FQDN).pem:/opt/ejabberd/ssl/$(FQDN).pem:ro \
+		--volume /etc/ejabberd/ejabberd.yml.tpl:/opt/ejabberd/conf/ejabberd.yml.tpl:ro \
+		--volume /srv/jabber/db:/opt/ejabberd/database/ejabberd \
+		--hostname '$(FQDN)' \
+		--env "ERLANG_NODE=ejabberd" \
+		--env "XMPP_DOMAIN=$(FQDN)" \
+		--env "EJABBERD_ADMIN=admin@$(FQDN) admin2@$(FQDN)" \
+		--env "TZ=Europe/Berlin" \
 		$(image_ejabberd)
 ## }}}
 
@@ -192,10 +200,10 @@ openvpn-gateway-example:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		-v /etc/openvpn/example-gateway:/etc/openvpn:ro \
-		-p 1194:1194/udp \
-		-e RUNNING=yes \
-		-e "TZ=Europe/Berlin" \
+		--volume /etc/openvpn/example-gateway:/etc/openvpn:ro \
+		--publish 1194:1194/udp \
+		--env RUNNING=yes \
+		--env "TZ=Europe/Berlin" \
 		--cap-add=NET_ADMIN \
 		$(image_openvpn)
 ## }}}
@@ -203,7 +211,7 @@ openvpn-gateway-example:
 ## nginx-reverse-reload {{{
 .PHONY: nginx-reverse-reload
 nginx-reverse-reload: nginx-gen
-	docker restart nginx-gen
+	docker start nginx-gen
 	docker stop nginx-gen
 	# docker restart nginx-reverse
 	docker kill --signal HUP nginx-reverse
@@ -215,15 +223,15 @@ owncloud-example:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		-h "$(FQDN)" \
+		--hostname "$(FQDN)" \
 		--link owncloud-db:db \
-		-v /srv/example/owncloud/data:/var/www/owncloud/data \
-		-v /srv/example/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
-		-v /srv/example/owncloud/config.php:/owncloud/config.php \
-		-e 'VIRTUAL_PATH=~example/owncloud' \
-		-e 'VIRTUAL_SERVER_TYPE=owncloud' \
-		-e 'VIRTUAL_PORT=80' \
-		-e "TZ=Europe/Berlin" \
+		--volume /srv/example/owncloud/data:/var/www/owncloud/data \
+		--volume /srv/example/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
+		--volume /srv/example/owncloud/config.php:/owncloud/config.php \
+		--env 'VIRTUAL_PATH=~example/owncloud' \
+		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
+		--env 'VIRTUAL_PORT=80' \
+		--env "TZ=Europe/Berlin" \
 		$(image_owncloud)
 	$(MAKE) nginx-reverse-reload
 # "apps_paths" => array (
@@ -249,12 +257,12 @@ seafile-example-db:
 	snapper -c seafile-example-db create -d 'Make seafile-example-db.'
 	docker run -d \
 		--name "$@" \
-		-e MYSQL_ROOT_PASSWORD=pw \
-		-e MYSQL_USER=seafile-user \
-		-e MYSQL_DATABASE=seafile-example-db \
-		-e MYSQL_PASSWORD=pw2 \
-		-e "TZ=Europe/Berlin" \
-		-v /srv/example/seafile/db:/var/lib/mysql \
+		--env MYSQL_ROOT_PASSWORD=pw \
+		--env MYSQL_USER=seafile-user \
+		--env MYSQL_DATABASE=seafile-example-db \
+		--env MYSQL_PASSWORD=pw2 \
+		--env "TZ=Europe/Berlin" \
+		--volume /srv/example/seafile/db:/var/lib/mysql \
 		mysql
 
 .PHONY: seafile-example
@@ -262,19 +270,19 @@ seafile-example:
 	-docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		-e "TZ=Europe/Berlin" \
-		-p 10002:10002 \
-		-p 12002:12002 \
-		-v "/srv/example/seafile/data:/opt/seafile" \
+		--env "TZ=Europe/Berlin" \
+		--publish 10002:10002 \
+		--publish 12002:12002 \
+		--volume "/srv/example/seafile/data:/opt/seafile" \
 		--link seafile-example-db:db \
-		-e "DB_ENV_MYSQL_USER=overwrite" \
-		-e "DB_ENV_MYSQL_PASSWORD=overwrite" \
-		-e "DB_ENV_MYSQL_DATABASE=overwrite" \
-		-e "DB_ENV_MYSQL_ROOT_PASSWORD=overwrite" \
-		-e 'VIRTUAL_PATH=example' \
-		-e 'VIRTUAL_PORT=8000' \
-		-e 'VIRTUAL_SERVER_TYPE=seafile' \
-		-e fastcgi=true \
-		-e autostart=true \
+		--env "DB_ENV_MYSQL_USER=overwrite" \
+		--env "DB_ENV_MYSQL_PASSWORD=overwrite" \
+		--env "DB_ENV_MYSQL_DATABASE=overwrite" \
+		--env "DB_ENV_MYSQL_ROOT_PASSWORD=overwrite" \
+		--env 'VIRTUAL_PATH=example' \
+		--env 'VIRTUAL_PORT=8000' \
+		--env 'VIRTUAL_SERVER_TYPE=seafile' \
+		--env fastcgi=true \
+		--env autostart=true \
 		$(image_seafile)
 	$(MAKE) nginx-reverse-reload
