@@ -8,6 +8,24 @@ The Makefile is intended to be included in a per-server Makefile.
 * All images should be based on Debian Jessie
 * A package proxy should be used (defined in the base image)
 
+# Used images
+
+* [kfei/docktorrent][]
+* [rroemhild/ejabberd][]
+* [lucaspiller/freeswitch][]
+* [kylemanna/openvpn][]
+* [postgres][]
+* [jchaney/owncloud][]
+* [jenserat/seafile][]
+
+[kfei/docktorrent]: https://github.com/kfei/docktorrent
+[rroemhild/ejabberd]: https://github.com/rroemhild/docker-ejabberd
+[lucaspiller/freeswitch]: https://github.com/lucaspiller/docker-freeswitch
+[kylemanna/openvpn]: https://github.com/kylemanna/docker-openvpn
+[postgres]: https://github.com/docker-library/postgres
+[jchaney/owncloud]: https://github.com/jchaney/owncloud
+[jenserat/seafile]: https://github.com/JensErat/docker-seafile
+
 # License of the Makefile
 [AGPLv3](https://www.gnu.org/licenses/agpl-3.0.html)
 
