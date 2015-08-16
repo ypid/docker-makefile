@@ -21,7 +21,8 @@ conf_dir ?= /etc/docker
 DOCKER_BUILD_OPTIONS ?= --no-cache
 docker_build_dir ?= /var/srv/docker
 docker_build_debian_version ?= jessie
-docker_build_debian_additional_programs ?= ,rename,iproute2
+docker_build_debian_additional_programs ?= ,rename,iproute2,iputils-ping,wget
+## Needed so often for debugging
 
 image_tor_server        ?= localbuild/tor
 image_postgres          ?= localbuild/postgres
@@ -130,8 +131,8 @@ tor-relay:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		--volume /etc/tor/relay/torrc:/etc/tor/torrc \
-		--volume /srv/tor:/var/lib/tor \
+		--volume /etc/tor/relay/torrc:/etc/tor/torrc:ro \
+		--volume /srv/tor/relay:/var/lib/tor \
 		--env "TZ=Europe/Berlin" \
 		--publish 993:993 \
 		--publish 465:465 \
@@ -143,8 +144,8 @@ tor-hidden-services:
 	-@docker rm -f "$@"
 	docker run -d \
 		--name "$@" \
-		--volume /etc/tor/hidden_services:/etc/tor \
-		--volume /srv/tor_hidden_service:/var/lib/tor \
+		--volume /etc/tor/hidden_services/torrc:/etc/tor/torrc:ro \
+		--volume /srv/tor/hidden_services:/var/lib/tor \
 		--publish-all=false \
 		--env "TZ=Europe/Berlin" \
 		$(image_tor_server) \
