@@ -30,6 +30,8 @@ docker_build_debian_version ?= jessie
 docker_build_postgres_version ?= 9.4
 
 docker_registry_http_secret ?= QMWtyYr7aZc05uKRWlx1ALe5p0v7GFsxKQRxwwl9TyNjDyLMvi1qMf9MBbC5yNK0akmfgygNYprf9WjaNrRdKUJY
+## Change this for each docker host!!!
+
 docker_registry_port ?= 5000
 
 image_tor_server        ?= localbuild/tor
@@ -40,6 +42,7 @@ image_seafile           ?= localbuild/seafile
 image_nginx_php         ?= localbuild/phpnginx
 image_freeswitch        ?= localbuild/freeswitch
 image_ejabberd          ?= localbuild/ejabberd
+# image_ejabberd          ?= rroemhild/ejabberd
 image_chatbot_err       ?= localbuild/chatbot_err
 image_chatbot_program_o ?= localbuild/chatbot_program_o
 image_chatbot_howie     ?= localbuild/chatbot_howie
@@ -49,13 +52,15 @@ image_nginx             ?= nginx
 image_mysql             ?= mysql
 
 default:
-	echo See Makefile
+	@echo See Makefile
 
 snapshots:
 	for i in /etc/snapper/configs/*; do snapper --config "`basename $i`" create --description 'Created by Makefile for docker'; done
 
 stop-all:
 	docker stop `docker ps --quiet`
+
+push-all: push-debian-base-image push-image-postgres
 
 ## https://www.calazan.com/docker-cleanup-commands/
 # remove-all-stopped-containers:
@@ -70,27 +75,20 @@ remove-all-dangling-images:
 
 .PHONY: apt-cacher-ng FORCE_MAKE
 apt-cacher-ng:
-	@(echo "Acquire::http::Proxy \"$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)\";"; \
+	@(echo "Acquire::http::Proxy \"$(shell apt-config dump | grep '^Acquire::http::Proxy ' | cut '--delimiter="' --fields 2)\";"; \
 	echo "Acquire::https::Proxy \"false\";") > "$@"
 
 build-debian-base-image: apt-cacher-ng
 	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) --no-compression --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(shell apt-config dump | grep '^Acquire::http::Proxy' | cut '--delimiter="' --fields 2)/http.debian.net/debian"
-	image="`docker images | egrep 'localbuild/debian\s+$(docker_build_debian_version)' | head --lines 1`"; \
-	echo "$$image"; \
-	id="`echo $$image | awk '{ print $$3 }'`"; \
-	docker tag --force "$$id" debian:latest; \
-	docker tag --force "$$id" debian:8; \
-	docker tag --force "$$id" debian:8.1; \
-	docker tag --force "$$id" "debian:$(docker_build_debian_version)"
+	docker tag --force debian:$(docker_build_debian_version) debian:latest
+	docker tag --force debian:$(docker_build_debian_version) debian:8
+	docker tag --force debian:$(docker_build_debian_version) debian:8.1
 	rm -rf "$(docker_build_dir)/"*
 
 upgrade-debian-base-image: build-debian-base-image
 
 push-debian-base-image:
-	image="`docker images | egrep 'localbuild/debian\s+$(docker_build_debian_version)' | head --lines 1`"; \
-	echo "$$image"; \
-	id="`echo $$image | awk '{ print $$3 }'`"; \
-	docker tag --force "$$id" "$(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)"
+	docker tag --force debian:$(docker_build_debian_version) $(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)
 	docker push "$(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)"
 
 ## build {{{
@@ -101,6 +99,7 @@ build-image-tor:
 
 build-image-owncloud:
 	-cd "$(conf_dir)/docker-owncloud" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_owncloud) .
+	docker tag $(image_owncloud) $(image_owncloud):$(shell date +%F)
 
 build-image-seafile:
 	## Used by seafile
@@ -122,23 +121,26 @@ build-image-chatbot-howie:
 
 build-image-ejabberd:
 	-cd "$(conf_dir)/docker-ejabberd" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_ejabberd) .
+	docker tag $(image_ejabberd) $(image_ejabberd):$(shell date +%F)
 
 build-image-openvpn:
 	-cd "$(conf_dir)/docker-openvpn" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_openvpn) .
+	docker tag $(image_openvpn) $(image_openvpn):$(shell date +%F)
+
+push-image-openvpn:
+	docker tag --force $(image_openvpn) $(HOST_FQDN):$(docker_registry_port)/openvpn
+	docker push $(HOST_FQDN):$(docker_registry_port)/openvpn
 
 build-image-postgres:
 	-cd "$(conf_dir)/docker-postgres/$(docker_build_postgres_version)" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_postgres) .
-	image="`docker images | egrep '$(image_postgres)' | head --lines 1`"; \
-	echo "$$image"; \
-	id="`echo $$image | awk '{ print $$3 }'`"; \
-	docker tag --force "$$id" "$(image_postgres):$(docker_build_postgres_version)"; \
+	docker tag --force $(image_postgres) $(image_postgres):$(docker_build_postgres_version)
+	docker tag --force $(image_postgres) $(image_postgres):$(shell date +%F)
 
 push-image-postgres:
-	image="`docker images | egrep '$(image_postgres)' | head --lines 1`"; \
-	echo "$$image"; \
-	id="`echo $$image | awk '{ print $$3 }'`"; \
-	docker tag --force "$$id" "$(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)"; \
-	docker push "$(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)"
+	docker tag --force $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres
+	docker tag --force $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)
+	docker push $(HOST_FQDN):$(docker_registry_port)/postgres
+	docker push $(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)
 
 build-image-bittorrent:
 	-cd "$(conf_dir)/docker-bittorrent" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_bittorrent) .
@@ -187,7 +189,7 @@ tor-relay:
 		--publish 993:993 \
 		--publish 465:465 \
 		$(image_tor_server) \
-		/usr/bin/tor --force /etc/tor/torrc
+		/usr/bin/tor -f /etc/tor/torrc
 		# --volume /srv/tor:/var/lib/tor \
 
 tor-hidden-services:
@@ -199,7 +201,7 @@ tor-hidden-services:
 		--volume /srv/tor/hidden_services:/var/lib/tor \
 		--publish-all=false \
 		$(image_tor_server) \
-		/usr/bin/tor --force /etc/tor/torrc
+		/usr/bin/tor -f /etc/tor/torrc
 		# --volume /srv/tor:/var/lib/tor \
 ## }}}
 
@@ -210,7 +212,7 @@ bittorrent:
 	docker run -it \
 		--name "$@" \
 		$(DOCKER_RUN_OPTIONS) \
-		--env 'VIRTUAL_PATH=~user_a/bittorrent' \
+		--env 'VIRTUAL_PATH=staging/bittorrent' \
 		--env 'VIRTUAL_SERVER_TYPE=rutorrent' \
 		--publish 45566:45566 \
 		--publish 9527:9527/udp \
@@ -269,6 +271,7 @@ nginx-reverse-reload:
 ## }}}
 
 ## owncloud {{{
+## See ttps://github.com/jchaney/owncloud for more examples.
 .PHONY: owncloud-example
 owncloud-example:
 	-@docker rm --force "$@"
@@ -277,6 +280,7 @@ owncloud-example:
 		$(DOCKER_RUN_OPTIONS) \
 		--hostname "$(FQDN)" \
 		--link owncloud-db:db \
+		--volume '/etc/docker/owncloud-custom/~example:/var/www/~example' \
 		--volume /srv/example/owncloud/data:/var/www/owncloud/data \
 		--volume /srv/example/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
 		--volume /srv/example/owncloud/config.php:/owncloud/config.php \
@@ -285,19 +289,31 @@ owncloud-example:
 		--env 'VIRTUAL_PORT=80' \
 		$(image_owncloud)
 	$(MAKE) nginx-reverse-reload
-# "apps_paths" => array (
-#   0 => array (
-#     "path"     => OC::$SERVERROOT."/apps",
-#     "url"      => "/apps",
-#     "writable" => false,
-#   ),
-#   1 => array (
-#     "path"     => OC::$SERVERROOT."/apps_persistent",
-#     "url"      => "/apps_persistent",
-#     "writable" => true,
-#   ),
-# ),
-# cd /var/www/ && mkdir '~user_a'&& ln -s ../owncloud '~user_a/'
+# cd /var/www/ && mkdir '~example' && ln -s ../owncloud '~example/'
+# Could not get the overwritewebroot to work.
+#
+
+# CREATE USER "owncloud_staging" WITH PASSWORD 'l2wVPb5BWYy8x5s5vNEm3JfX76D8IXZ2RWYw5Tjy';
+# CREATE DATABASE "owncloud_staging" TEMPLATE template0 ENCODING 'UNICODE';
+# ALTER DATABASE "owncloud_staging" OWNER TO "owncloud_staging";
+# GRANT ALL PRIVILEGES ON DATABASE "owncloud_staging" TO "owncloud_staging";
+owncloud-staging:
+	-@docker rm --force "$@"
+	docker run --detach \
+		--name "$@" \
+		$(DOCKER_RUN_OPTIONS) \
+		--hostname "$(FQDN)" \
+		--link owncloud-db:db \
+		--volume '/etc/docker/owncloud-custom/staging:/var/www/staging' \
+		--volume /srv/staging/owncloud/data:/var/www/owncloud/data \
+		--volume /srv/staging/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
+		--env 'VIRTUAL_PATH=staging/owncloud' \
+		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
+		--env 'VIRTUAL_PORT=80' \
+		$(image_owncloud)
+	$(MAKE) nginx-reverse-reload
+		r/www/ && mkdir 'staging' && ln -s ../owncloud 'staging/'
+
 ## }}}
 
 ## seafile {{{
