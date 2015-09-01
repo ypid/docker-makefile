@@ -82,10 +82,12 @@ nameserver 8.8.4.4
 EOF
 
 ## Overwrite proxy stuff which was setup by debootstrap.
-cat > "$rootfsDir/etc/apt/sources.list" <<'EOF'
-deb http://http.debian.net/debian jessie main
-deb http://http.debian.net/debian jessie-updates main
-deb http://security.debian.org jessie/updates main
+source "$rootfsDir/etc/os-release"
+distribution_release="$(echo "$VERSION" | sed --regexp-extended 's/[[:digit:]]+\s+\((\w+)\)/\1/')"
+cat > "$rootfsDir/etc/apt/sources.list" <<EOF
+deb http://http.debian.net/debian ${distribution_release} main
+deb http://http.debian.net/debian ${distribution_release}-updates main
+deb http://security.debian.org ${distribution_release}/updates main
 EOF
 
 ## Setup new proxy using apt variables.

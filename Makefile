@@ -21,6 +21,7 @@ SHELL     ?= /bin/bash
 conf_dir  ?= /etc/docker
 DOCKER_BUILD_OPTIONS ?= --no-cache
 DOCKER_RUN_OPTIONS ?= --env "TZ=Europe/Berlin"
+MKIMAGE_OPTIONS ?= --no-compression
 docker_build_dir ?= /var/srv/docker
 
 APT_PROXY_URL ?= $(shell apt-config dump | grep '^Acquire::http::Proxy ' | cut '--delimiter="' --fields 2)
@@ -81,15 +82,16 @@ apt-cacher-ng:
 	echo "Acquire::https::Proxy \"false\";") > "$@"
 
 build-debian-base-image: apt-cacher-ng
-	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) --no-compression --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(APT_PROXY_URL)/http.debian.net/debian"
+	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(APT_PROXY_URL)/http.debian.net/debian"
 	docker tag --force debian:$(docker_build_debian_version) debian:latest
 	docker tag --force debian:$(docker_build_debian_version) debian:8
 	docker tag --force debian:$(docker_build_debian_version) debian:8.1
 	rm -rf "$(docker_build_dir)/"*
 
 build-debian-wheezy-i368-base-image: apt-cacher-ng
-	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:wheezy --no-compression --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase --arch=i368 wheezy "$(APT_PROXY_URL)/http.debian.net/debian"
-	docker tag --force debian:wheezy debian:7
+	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian_i386:wheezy $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates --variant=minbase --arch=i386 wheezy "$(APT_PROXY_URL)/http.debian.net/debian"
+	docker tag --force localbuild/debian_i386:wheezy debian_i386:wheezy
+	docker tag --force localbuild/debian_i386:wheezy debian_i386:7
 	rm -rf "$(docker_build_dir)/"*
 
 upgrade-debian-base-image: build-debian-base-image
