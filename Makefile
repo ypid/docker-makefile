@@ -89,7 +89,7 @@ build-debian-base-image: apt-cacher-ng
 	rm -rf "$(docker_build_dir)/"*
 
 build-debian-wheezy-i368-base-image: apt-cacher-ng
-	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian_i386:wheezy $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates --variant=minbase --arch=i386 wheezy "$(APT_PROXY_URL)/http.debian.net/debian"
+	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian_i386:wheezy $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates,procps --variant=minbase --arch=i386 wheezy "$(APT_PROXY_URL)/http.debian.net/debian"
 	docker tag --force localbuild/debian_i386:wheezy debian_i386:wheezy
 	docker tag --force localbuild/debian_i386:wheezy debian_i386:7
 	rm -rf "$(docker_build_dir)/"*
