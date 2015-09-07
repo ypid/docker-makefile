@@ -36,6 +36,8 @@ docker_registry_http_secret ?= QMWtyYr7aZc05uKRWlx1ALe5p0v7GFsxKQRxwwl9TyNjDyLMv
 ## Change this for each docker host!!!
 
 docker_registry_port ?= 5000
+tor_or_port  ?= 993
+tor_dir_port ?= 465
 
 image_tor_server        ?= localbuild/tor
 image_postgres          ?= localbuild/postgres
@@ -195,11 +197,10 @@ tor-relay:
 		$(DOCKER_RUN_OPTIONS) \
 		--volume /etc/tor/relay/torrc:/etc/tor/torrc:ro \
 		--volume /srv/tor/relay:/var/lib/tor \
-		--publish 993:993 \
-		--publish 465:465 \
+		--publish $(tor_or_port):$(tor_or_port) \
+		--publish $(tor_dir_port):$(tor_dir_port) \
 		$(image_tor_server) \
 		/usr/bin/tor -f /etc/tor/torrc
-		# --volume /srv/tor:/var/lib/tor \
 
 tor-hidden-services:
 	-@docker rm --force "$@"
@@ -211,7 +212,6 @@ tor-hidden-services:
 		--publish-all=false \
 		$(image_tor_server) \
 		/usr/bin/tor -f /etc/tor/torrc
-		# --volume /srv/tor:/var/lib/tor \
 ## }}}
 
 ## Bittorrent {{{
@@ -280,7 +280,7 @@ nginx-reverse-reload:
 ## }}}
 
 ## owncloud {{{
-## See ttps://github.com/jchaney/owncloud for more examples.
+## See https://github.com/jchaney/owncloud for more examples.
 .PHONY: owncloud-example
 owncloud-example:
 	-@docker rm --force "$@"
@@ -292,7 +292,7 @@ owncloud-example:
 		--volume '/etc/docker/owncloud-custom/~example:/var/www/~example' \
 		--volume /srv/example/owncloud/data:/var/www/owncloud/data \
 		--volume /srv/example/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
-		--volume /srv/example/owncloud/config.php:/owncloud/config.php \
+		--volume /srv/example/owncloud/config:/owncloud \
 		--env 'VIRTUAL_PATH=~example/owncloud' \
 		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
 		--env 'VIRTUAL_PORT=80' \
@@ -316,12 +316,13 @@ owncloud-staging:
 		--volume '/etc/docker/owncloud-custom/staging:/var/www/staging' \
 		--volume /srv/staging/owncloud/data:/var/www/owncloud/data \
 		--volume /srv/staging/owncloud/apps_persistent:/var/www/owncloud/apps_persistent \
+		--volume /srv/staging/owncloud/config:/owncloud \
 		--env 'VIRTUAL_PATH=staging/owncloud' \
 		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
 		--env 'VIRTUAL_PORT=80' \
 		$(image_owncloud)
 	$(MAKE) nginx-reverse-reload
-		r/www/ && mkdir 'staging' && ln -s ../owncloud 'staging/'
+		# r/www/ && mkdir 'staging' && ln -s ../owncloud 'staging/'
 
 ## }}}
 
