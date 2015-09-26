@@ -39,6 +39,8 @@ docker_registry_port ?= 5000
 tor_or_port  ?= 993
 tor_dir_port ?= 465
 
+bittorrent_upload_rate ?= 500
+
 image_tor_server        ?= localbuild/tor
 image_postgres          ?= localbuild/postgres
 image_owncloud          ?= localbuild/owncloud
@@ -230,20 +232,19 @@ tor-hidden-services:
 .PHONY: bittorrent
 bittorrent:
 	-@docker rm --force "$@"
-	docker run -it \
+	docker run --interactive --tty \
 		--name "$@" \
 		$(DOCKER_RUN_OPTIONS) \
 		--env 'VIRTUAL_PATH=staging/bittorrent' \
 		--env 'VIRTUAL_SERVER_TYPE=rutorrent' \
+		--env "UPLOAD_RATE=$(bittorrent_upload_rate)" \
 		--publish 45566:45566 \
 		--publish 9527:9527/udp \
 		--volume /srv/bittorrent:/rtorrent \
 		--volume /etc/rtorrent/htpasswd:/etc/nginx/htpasswd:ro \
 		--volume /etc/rtorrent/nginx:/etc/nginx/sites-available/default:ro \
-		--env UPLOAD_RATE=500 \
 		$(image_bittorrent)
-		# --volume /etc/rtorrent/rtorrent.rc:/root/.rtorrent.rc \
-		# --publish 801:80 \
+	$(MAKE) nginx-reverse-reload
 ## }}}
 
 ## ejabberd {{{
