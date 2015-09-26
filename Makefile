@@ -20,7 +20,7 @@ HOST_FQDN ?= $(shell hostname --fqdn)
 SHELL     ?= /bin/bash
 conf_dir  ?= /etc/docker
 DOCKER_BUILD_OPTIONS ?= --no-cache
-DOCKER_RUN_OPTIONS ?= --env "TZ=Europe/Berlin"
+DOCKER_RUN_OPTIONS ?= --env "TZ=Europe/Berlin" --restart=always
 MKIMAGE_OPTIONS ?= --no-compression
 docker_build_dir ?= /var/srv/docker
 
@@ -66,6 +66,18 @@ stop-all:
 	docker stop `docker ps --quiet`
 
 push-all: push-debian-base-image push-image-postgres
+
+daily-template:
+	docker exec owncloud-db autopostgresqlbackup
+
+weekly-template: pre-backup-template post-backup-template
+	date
+
+pre-backup-template: upgrade-all-images-template
+
+post-backup-template: tor-relay tor-hidden-services owncloud-staging openvpn-gateway-example push-all remove-all-dangling-images
+
+upgrade-all-images-template: upgrade-debian-base-image build-image-tor build-image-openvpn build-image-postgres build-image-owncloud build-image-postgres build-image-ejabberd
 
 ## https://www.calazan.com/docker-cleanup-commands/
 # remove-all-stopped-containers:
