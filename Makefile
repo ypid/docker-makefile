@@ -44,6 +44,10 @@ bittorrent_upload_rate ?= 500
 image_tor_server        ?= localbuild/tor
 image_postgres          ?= localbuild/postgres
 image_owncloud          ?= localbuild/owncloud
+
+image_wordpress         ?= wordpress
+## wordpress:fpm did not respond?
+
 image_openvpn           ?= localbuild/openvpn
 image_seafile           ?= localbuild/seafile
 image_nginx_php         ?= localbuild/phpnginx
@@ -57,6 +61,7 @@ image_bittorrent        ?= localbuild/bittorrent
 image_registry2         ?= registry:2
 image_nginx             ?= nginx
 image_mysql             ?= mysql
+image_mariadb           ?= localbuild/mariadb
 
 default:
 	@echo See Makefile
@@ -130,6 +135,9 @@ build-image-seafile:
 	## Used by seafile
 	# docker pull phusion/baseimage
 	-cd "$(conf_dir)/docker-seafile" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_seafile) .
+
+build-image-mariadb:
+	-cd "$(conf_dir)/docker-mariadb/10.0/" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_mariadb) .
 
 build-image-freeswitch:
 	-cd "$(conf_dir)/freeswitch" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_freeswitch) .
@@ -337,6 +345,50 @@ owncloud-staging:
 	$(MAKE) nginx-reverse-reload
 		# r/www/ && mkdir 'staging' && ln -s ../owncloud 'staging/'
 
+## }}}
+
+## https://hub.docker.com/_/mariadb/
+.PHONY: mariadb
+mariadb-example:
+	-@docker rm --force "$@"
+	docker run --detach \
+		--name "$@" \
+		$(DOCKER_RUN_OPTIONS) \
+		--env 'MYSQL_ROOT_PASSWORD=MrqU8yk7WCjO8qJ3rQlb2s' \
+		--env 'MYSQL_USER=wordpress-staging \
+		--env 'MYSQL_DATABASE=wordpress-staging' \
+		--env 'MYSQL_PASSWORD=ZbO4QhCCnTeZOlsOY1Bk1Y' \
+		--volume /srv/db/mariadb:/var/lib/mysql \
+		$(image_mariadb)
+
+## WordPress {{{
+## https://github.com/docker-library/wordpress/blob/master/apache/Dockerfile
+## https://hub.docker.com/_/wordpress/
+.PHONY: wordpress-staging
+wordpress-staging:
+	-@docker rm --force "$@"
+	docker run --detach \
+		--name "$@" \
+		$(DOCKER_RUN_OPTIONS) \
+		--hostname "$(FQDN)" \
+		--link mariadb:mysql \
+		--env 'WORDPRESS_DB_USER=wordpress-staging' \
+		--env 'WORDPRESS_DB_NAME=wordpress-staging' \
+		--env 'WORDPRESS_DB_PASSWORD=ZbO4QhCCnTeZOlsOY1Bk1Y' \
+		--env 'WORDPRESS_TABLE_PREFIX=wp_eZSN6ccz_' \
+		--env 'MYSQL_ENV_MYSQL_USER=overwrite' \
+		--env 'MYSQL_ENV_MYSQL_PASSWORD=overwrite' \
+		--env 'MYSQL_ENV_MYSQL_DATABASE=overwrite' \
+		--env 'MYSQL_ENV_MYSQL_ROOT_PASSWORD=overwrite' \
+		--env 'VIRTUAL_PATH=~staging/wordpress' \
+		--env 'VIRTUAL_NOT_REDIRECT_TO_HTTPS=1' \
+		--env 'VIRTUAL_SERVER_TYPE=wordpress' \
+		--env 'VIRTUAL_PORT=80' \
+		--env 'VIRTUAL_CNAME=blog.staging.example.com' \
+		--volume /srv/staging/wordpress:/var/www/html/wp-content \
+		$(image_wordpress)
+		wordpress:fpm
+	$(MAKE) nginx-reverse-reload
 ## }}}
 
 ## seafile {{{
