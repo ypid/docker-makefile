@@ -385,6 +385,7 @@ wordpress-example:
 		--env 'VIRTUAL_SERVER_TYPE=wordpress' \
 		--env 'VIRTUAL_PORT=80' \
 		--env 'VIRTUAL_CNAME=blog.staging.example.com' \
+		--volume "$(conf_dir)/docker-makefile/config_snippits/php_uploads.ini:/usr/local/etc/php/conf.d/uploads.ini" \
 		--volume /srv/staging/wordpress:/var/www/html/wp-content \
 		$(image_wordpress)
 	$(MAKE) nginx-reverse-reload
