@@ -355,8 +355,8 @@ mariadb-example:
 		--name "$@" \
 		$(DOCKER_RUN_OPTIONS) \
 		--env 'MYSQL_ROOT_PASSWORD=MrqU8yk7WCjO8qJ3rQlb2s' \
-		--env 'MYSQL_USER=wordpress-staging \
-		--env 'MYSQL_DATABASE=wordpress-staging' \
+		--env 'MYSQL_USER=wordpress-example \
+		--env 'MYSQL_DATABASE=wordpress-example' \
 		--env 'MYSQL_PASSWORD=ZbO4QhCCnTeZOlsOY1Bk1Y' \
 		--volume /srv/db/mariadb:/var/lib/mysql \
 		$(image_mariadb)
@@ -364,16 +364,16 @@ mariadb-example:
 ## WordPress {{{
 ## https://github.com/docker-library/wordpress/blob/master/apache/Dockerfile
 ## https://hub.docker.com/_/wordpress/
-.PHONY: wordpress-staging
-wordpress-staging:
+.PHONY: wordpress-example
+wordpress-example:
 	-@docker rm --force "$@"
 	docker run --detach \
 		--name "$@" \
 		$(DOCKER_RUN_OPTIONS) \
 		--hostname "$(FQDN)" \
 		--link mariadb:mysql \
-		--env 'WORDPRESS_DB_USER=wordpress-staging' \
-		--env 'WORDPRESS_DB_NAME=wordpress-staging' \
+		--env 'WORDPRESS_DB_USER=wordpress-example' \
+		--env 'WORDPRESS_DB_NAME=wordpress-example' \
 		--env 'WORDPRESS_DB_PASSWORD=ZbO4QhCCnTeZOlsOY1Bk1Y' \
 		--env 'WORDPRESS_TABLE_PREFIX=wp_eZSN6ccz_' \
 		--env 'MYSQL_ENV_MYSQL_USER=overwrite' \
@@ -387,7 +387,6 @@ wordpress-staging:
 		--env 'VIRTUAL_CNAME=blog.staging.example.com' \
 		--volume /srv/staging/wordpress:/var/www/html/wp-content \
 		$(image_wordpress)
-		wordpress:fpm
 	$(MAKE) nginx-reverse-reload
 ## }}}
 
