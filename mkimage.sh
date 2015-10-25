@@ -83,7 +83,11 @@ EOF
 
 ## Overwrite proxy stuff which was setup by debootstrap.
 source "$rootfsDir/etc/os-release"
-distribution_release="$(echo "$VERSION" | sed --regexp-extended 's/[[:digit:]]+\s+\((\w+)\)/\1/')"
+if [ -n "$VERSION" ]; then
+	distribution_release="$(echo "$VERSION" | sed --regexp-extended 's/[[:digit:]]+\s+\((\w+)\)/\1/')"
+else
+	distribution_release="$(sed 's#/.*$##' "$rootfsDir/etc/debian_version")"
+fi
 cat > "$rootfsDir/etc/apt/sources.list" <<EOF
 deb http://http.debian.net/debian ${distribution_release} main
 deb http://http.debian.net/debian ${distribution_release}-updates main

@@ -102,6 +102,7 @@ apt-cacher-ng:
 	@(echo "Acquire::http::Proxy \"$(APT_PROXY_URL)\";"; \
 	echo "Acquire::https::Proxy \"false\";") > "$@"
 
+.PHONY: build-debian-base-image
 build-debian-base-image: apt-cacher-ng
 	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(APT_PROXY_URL)/http.debian.net/debian"
 	docker tag --force debian:$(docker_build_debian_version) debian:latest
@@ -109,6 +110,14 @@ build-debian-base-image: apt-cacher-ng
 	docker tag --force debian:$(docker_build_debian_version) debian:8.1
 	rm -rf "$(docker_build_dir)/"*
 
+.PHONY: build-debian-stretch-base-image
+build-debian-stretch-base-image: apt-cacher-ng
+	$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:stretch $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates,procps --variant=minbase stretch "$(APT_PROXY_URL)/http.debian.net/debian"
+	docker tag --force localbuild/debian:stretch debian:stretch
+	docker tag --force localbuild/debian:stretch debian:9
+	rm -rf "$(docker_build_dir)/"*
+
+.PHONY: build-debian-wheezy-i368-base-image
 build-debian-wheezy-i368-base-image: apt-cacher-ng
 	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian_i386:wheezy $(MKIMAGE_OPTIONS) --dir $(docker_build_dir) debootstrap --include=git,ca-certificates,procps --variant=minbase --arch=i386 wheezy "$(APT_PROXY_URL)/http.debian.net/debian"
 	docker tag --force localbuild/debian_i386:wheezy debian_i386:wheezy
