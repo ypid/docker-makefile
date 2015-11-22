@@ -346,6 +346,7 @@ owncloud-example:
 		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
 		--env 'VIRTUAL_PORT=80' \
 		$(image_owncloud)
+	-docker exec --interactive --tty "$@" occ upgrade
 	$(MAKE) nginx-reverse-reload
 # cd /var/www/ && mkdir '~example' && ln -s ../owncloud '~example/'
 # Could not get the overwritewebroot to work.
@@ -370,6 +371,7 @@ owncloud-staging:
 		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
 		--env 'VIRTUAL_PORT=80' \
 		$(image_owncloud)
+	-docker exec --interactive --tty "$@" occ upgrade
 	$(MAKE) nginx-reverse-reload
 		# r/www/ && mkdir 'staging' && ln -s ../owncloud 'staging/'
 
