@@ -58,6 +58,8 @@ image_chatbot_err       ?= localbuild/chatbot_err
 image_chatbot_program_o ?= localbuild/chatbot_program_o
 image_chatbot_howie     ?= localbuild/chatbot_howie
 image_bittorrent        ?= localbuild/bittorrent
+image_stealthbox        ?= toilal/stealthbox
+# image_stealthbox        ?= localbuild/stealthbox
 image_registry2         ?= registry:2
 image_nginx             ?= nginx
 image_mysql             ?= mysql
@@ -188,6 +190,7 @@ push-image-postgres:
 
 build-image-bittorrent:
 	-cd "$(conf_dir)/docker-bittorrent" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_bittorrent) .
+	docker tag --force $(image_bittorrent) $(image_bittorrent):$(shell date +%F)
 
 prefetch-packages:
 	# -cd "$(conf_dir)/apt_package_lists" && docker build $(DOCKER_BUILD_OPTIONS) .
@@ -264,6 +267,20 @@ bittorrent:
 		--volume /etc/rtorrent/nginx:/etc/nginx/sites-available/default:ro \
 		$(image_bittorrent)
 	$(MAKE) nginx-reverse-reload
+
+.PHONY: stealthbox
+stealthbox:
+	-@docker rm --force "$@"
+	docker run --detach \
+		--name "$@" \
+		$(DOCKER_RUN_OPTIONS) \
+		--env 'VIRTUAL_PATH=staging/stealthbox' \
+		--env 'VIRTUAL_PATH=deluge' \
+		--env 'VIRTUAL_SERVER_TYPE=owncloud' \
+		--publish 6881:6881 \
+		$(image_stealthbox)
+	$(MAKE) nginx-reverse-reload
+
 ## }}}
 
 ## ejabberd {{{
