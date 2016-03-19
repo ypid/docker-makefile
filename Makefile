@@ -95,6 +95,9 @@ upgrade-all-images-template: upgrade-debian-base-image build-image-tor build-ima
 remove-all-dangling-images:
 	-docker rmi --force=false $(shell docker images --quiet --filter 'dangling=true')
 
+remove-old-images:
+	docker images | grep "\s$$(date -d "-1 year" "+%Y")-" | sed --regexp-extended 's/([^ ]+)\s+([0-9-]+).*/\1:\2/' | xargs docker rmi
+
 # install-images:
 #     docker pull jwilder/docker-gen
 #     # Updates not needed/wanted
@@ -107,10 +110,11 @@ apt-cacher-ng:
 .PHONY: build-debian-base-image
 build-debian-base-image: apt-cacher-ng
 	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)" debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(APT_PROXY_URL)/http.debian.net/debian"
-	docker tag --force debian:$(docker_build_debian_version) debian:latest
-	docker tag --force debian:$(docker_build_debian_version) debian:stable
-	docker tag --force debian:$(docker_build_debian_version) debian:8
-	docker tag --force debian:$(docker_build_debian_version) debian:8.2
+	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:latest
+	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:stable
+	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:jessie
+	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:8
+	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:8.3
 	rm -rf "$(docker_build_dir)/"*
 
 .PHONY: build-debian-stretch-base-image
@@ -142,7 +146,7 @@ build-image-tor:
 
 build-image-owncloud:
 	-cd "$(conf_dir)/docker-owncloud" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_owncloud) .
-	docker tag $(image_owncloud) $(image_owncloud):$(shell date +%F)
+	# docker tag $(image_owncloud) $(image_owncloud):$(shell date +%F)
 
 build-image-seafile:
 	## Used by seafile
@@ -167,11 +171,11 @@ build-image-chatbot-howie:
 
 build-image-ejabberd:
 	-cd "$(conf_dir)/docker-ejabberd" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_ejabberd) .
-	docker tag $(image_ejabberd) $(image_ejabberd):$(shell date +%F)
+	# docker tag $(image_ejabberd) $(image_ejabberd):$(shell date +%F)
 
 build-image-openvpn:
 	-cd "$(conf_dir)/docker-openvpn" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_openvpn) .
-	docker tag $(image_openvpn) $(image_openvpn):$(shell date +%F)
+	# docker tag $(image_openvpn) $(image_openvpn):$(shell date +%F)
 
 push-image-openvpn:
 	docker tag --force $(image_openvpn) $(HOST_FQDN):$(docker_registry_port)/openvpn
@@ -180,7 +184,7 @@ push-image-openvpn:
 build-image-postgres:
 	-cd "$(conf_dir)/docker-postgres/$(docker_build_postgres_version)" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_postgres) .
 	docker tag --force $(image_postgres) $(image_postgres):$(docker_build_postgres_version)
-	docker tag --force $(image_postgres) $(image_postgres):$(shell date +%F)
+	# docker tag --force $(image_postgres) $(image_postgres):$(shell date +%F)
 
 push-image-postgres:
 	docker tag --force $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres
@@ -190,7 +194,7 @@ push-image-postgres:
 
 build-image-bittorrent:
 	-cd "$(conf_dir)/docker-bittorrent" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_bittorrent) .
-	docker tag --force $(image_bittorrent) $(image_bittorrent):$(shell date +%F)
+	# docker tag --force $(image_bittorrent) $(image_bittorrent):$(shell date +%F)
 
 prefetch-packages:
 	# -cd "$(conf_dir)/apt_package_lists" && docker build $(DOCKER_BUILD_OPTIONS) .
