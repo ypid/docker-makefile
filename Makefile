@@ -114,7 +114,7 @@ build-debian-base-image: apt-cacher-ng
 	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:stable
 	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:jessie
 	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:8
-	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:8.3
+	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:8.5
 	rm -rf "$(docker_build_dir)/"*
 
 .PHONY: build-debian-stretch-base-image
