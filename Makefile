@@ -144,7 +144,7 @@ build-image-tor:
 	-cd "$(conf_dir)/docker-tor" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_tor_server) .
 
 build-image-owncloud:
-	-cd "$(conf_dir)/docker-owncloud" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_owncloud) .
+	-cd "$(conf_dir)/docker-owncloud" && git pull && git verify-commit HEAD && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_owncloud) .
 	# docker tag $(image_owncloud) $(image_owncloud):$(shell date +%F)
 
 build-image-seafile:
