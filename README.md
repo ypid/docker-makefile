@@ -4,8 +4,9 @@ The repository keeps track of the Makefile I use to manage docker images and con
 The Makefile is intended to be included in a per-server Makefile.
 
 # Goals
+
 * All images should be locally build (including the base image)
-* All images should be based on Debian Jessie
+* All images should be based on Debian Stable.
 * A package proxy should be used (defined in the base image)
 
 # Used images
@@ -27,7 +28,8 @@ The Makefile is intended to be included in a per-server Makefile.
 [jenserat/seafile]: https://github.com/JensErat/docker-seafile
 
 # License of the Makefile
-[AGPLv3](https://www.gnu.org/licenses/agpl-3.0.html)
+
+[AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.html)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

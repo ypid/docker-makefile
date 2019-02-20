@@ -60,7 +60,7 @@ fi
 
 delDir=
 if [ -z "$dir" ]; then
-	dir="$(mktemp -d ${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX)"
+	dir="$(mktemp -d "${TMPDIR:-/var/tmp}/docker-mkimage.XXXXXXXXXX")"
 	delDir=1
 fi
 
@@ -82,20 +82,31 @@ nameserver 8.8.4.4
 EOF
 
 ## Overwrite proxy stuff which was setup by debootstrap.
+
+## shellcheck source=/etc/os-release
+# shellcheck source=/dev/null
 source "$rootfsDir/etc/os-release"
 if [ -n "$VERSION" ]; then
 	distribution_release="$(echo "$VERSION" | sed --regexp-extended 's/[[:digit:]]+\s+\((\w+)\)/\1/')"
 else
 	distribution_release="$(sed 's#/.*$##' "$rootfsDir/etc/debian_version")"
 fi
-cat > "$rootfsDir/etc/apt/sources.list" <<EOF
-deb http://http.debian.net/debian ${distribution_release} main
-deb http://http.debian.net/debian ${distribution_release}-updates main
+if echo "$@" | grep -i ubuntu; then
+    cat > "$rootfsDir/etc/apt/sources.list" <<EOF
+deb http://archive.ubuntu.com/ubuntu ${UBUNTU_CODENAME} main universe
+deb http://archive.ubuntu.com/ubuntu ${UBUNTU_CODENAME}-updates main universe
+deb http://archive.ubuntu.com/ubuntu ${UBUNTU_CODENAME}-security main universe
+EOF
+else
+    cat > "$rootfsDir/etc/apt/sources.list" <<EOF
+deb http://deb.debian.org/debian ${distribution_release} main
+deb http://deb.debian.org/debian ${distribution_release}-updates main
 deb http://security.debian.org ${distribution_release}/updates main
 EOF
+fi
 
 ## Setup new proxy using apt variables.
-cp apt-cacher-ng "$rootfsDir/etc/apt/apt.conf"
+cp apt_proxy.conf "$rootfsDir/etc/apt/apt.conf"
 
 tarFile="$dir/rootfs.tar${compression:+.$compression}"
 touch "$tarFile"

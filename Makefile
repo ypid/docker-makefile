@@ -18,13 +18,17 @@ ARGS      ?= ''
 FQDN      ?= 'example.com'
 HOST_FQDN ?= $(shell hostname --fqdn)
 SHELL     ?= /bin/bash
+
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+docker_makefile_dir_path := $(dir $(mkfile_path))
+
 conf_dir  ?= /etc/docker
 DOCKER_BUILD_OPTIONS ?= --no-cache
 DOCKER_RUN_OPTIONS ?= --env "TZ=Europe/Berlin" --restart=always
 MKIMAGE_OPTIONS ?= --no-compression
-docker_build_dir ?= /var/srv/docker
+docker_build_dir ?= /usr/local/src/docker/base-image
 
-APT_PROXY_URL ?= $(shell apt-config dump | grep '^Acquire::http::Proxy ' | cut '--delimiter="' --fields 2)
+APT_PROXY_URL ?= $(shell apt-config dump | grep -i '^Acquire::HTTP::Proxy ' | cut '--delimiter="' --fields 2)
 
 docker_build_debian_additional_programs ?= ,rename,iproute2,iputils-ping,wget
 ## Needed so often for debugging
@@ -102,36 +106,28 @@ remove-old-images:
 #     docker pull jwilder/docker-gen
 #     # Updates not needed/wanted
 
-.PHONY: apt-cacher-ng FORCE_MAKE
-apt-cacher-ng:
-	@(echo "Acquire::http::Proxy \"$(APT_PROXY_URL)\";"; \
-	echo "Acquire::https::Proxy \"false\";") > "$@"
-
-.PHONY: build-debian-base-image
-build-debian-base-image: apt-cacher-ng
-	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:$(docker_build_debian_version) $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)" debootstrap --include=git,ca-certificates$(docker_build_debian_additional_programs) --variant=minbase $(docker_build_debian_version) "$(APT_PROXY_URL)/http.debian.net/debian"
-	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:latest
-	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:stable
-	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:jessie
-	docker tag --force localbuild/debian:$(docker_build_debian_version) debian:8
-	rm -rf "$(docker_build_dir)/"*
+.PHONY: apt_proxy.conf FORCE_MAKE
+apt_proxy.conf:
+	apt-config dump | egrep -i '^Acquire::HTTPS?::Proxy\b' > "$@"
 
 .PHONY: build-debian-stretch-base-image
-build-debian-stretch-base-image: apt-cacher-ng
-	$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian:stretch $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)" debootstrap --include=git,ca-certificates,procps --variant=minbase stretch "$(APT_PROXY_URL)/http.debian.net/debian"
+build-debian-stretch-base-image: apt_proxy.conf
+	rm -rf "$(docker_build_dir)/$@"
+	$(docker_makefile_dir_path)/mkimage.sh -t localbuild/debian:stretch $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)/$@" debootstrap --include=git,ca-certificates,procps --variant=minbase stretch "$(APT_PROXY_URL)/deb.debian.org/debian"
 	docker tag --force localbuild/debian:stretch debian:stretch
 	docker tag --force localbuild/debian:stretch debian:testing
 	docker tag --force localbuild/debian:stretch debian:9
-	rm -rf "$(docker_build_dir)/"*
+	rm -rf "$(docker_build_dir)/$@"
 
-.PHONY: build-debian-wheezy-i368-base-image
-build-debian-wheezy-i368-base-image: apt-cacher-ng
-	-$(conf_dir)/docker-makefile/mkimage.sh -t localbuild/debian_i386:wheezy $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)" debootstrap --include=git,ca-certificates,procps --variant=minbase --arch=i386 wheezy "$(APT_PROXY_URL)/http.debian.net/debian"
-	docker tag --force localbuild/debian_i386:wheezy debian_i386:wheezy
-	docker tag --force localbuild/debian_i386:wheezy debian_i386:7
-	rm -rf "$(docker_build_dir)/"*
+.PHONY: build-ubuntu-cosmic-base-image
+build-ubuntu-cosmic-base-image: apt_proxy.conf
+	rm -rf "$(docker_build_dir)/$@"
+	$(docker_makefile_dir_path)/mkimage.sh -t localbuild/ubuntu:cosmic $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)/$@" debootstrap --include=ubuntu-minimal,git,ca-certificates,procps --components=main,universe --variant=minbase cosmic "$(APT_PROXY_URL)/archive.ubuntu.com/ubuntu"
+	docker tag localbuild/ubuntu:cosmic ubuntu:cosmic
+	docker tag localbuild/ubuntu:cosmic ubuntu:18.10
+	rm -rf "$(docker_build_dir)/$@"
 
-upgrade-debian-base-image: build-debian-base-image
+upgrade-debian-base-image: build-debian-stretch-base-image
 
 push-debian-base-image:
 	docker tag --force debian:$(docker_build_debian_version) $(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)
@@ -416,7 +412,7 @@ wordpress-example:
 		--env 'VIRTUAL_SERVER_TYPE=wordpress' \
 		--env 'VIRTUAL_PORT=80' \
 		--env 'VIRTUAL_CNAME=blog.staging.example.com' \
-		--volume "$(conf_dir)/docker-makefile/config_snippits/php_uploads.ini:/usr/local/etc/php/conf.d/uploads.ini" \
+		--volume "$(docker_makefile_dir_path)/config_snippits/php_uploads.ini:/usr/local/etc/php/conf.d/uploads.ini" \
 		--volume /srv/staging/wordpress:/var/www/html/wp-content \
 		$(image_wordpress)
 	$(MAKE) nginx-reverse-reload
