@@ -114,9 +114,15 @@ apt_proxy.conf:
 build-debian-stretch-base-image: apt_proxy.conf
 	rm -rf "$(docker_build_dir)/$@"
 	$(docker_makefile_dir_path)/mkimage.sh -t localbuild/debian:stretch $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)/$@" debootstrap --include=git,ca-certificates,procps --variant=minbase stretch "$(APT_PROXY_URL)/deb.debian.org/debian"
-	docker tag --force localbuild/debian:stretch debian:stretch
-	docker tag --force localbuild/debian:stretch debian:testing
-	docker tag --force localbuild/debian:stretch debian:9
+	docker tag localbuild/debian:stretch debian:stretch
+	docker tag localbuild/debian:stretch debian:9
+	rm -rf "$(docker_build_dir)/$@"
+
+.PHONY: build-debian-buster-base-image
+build-debian-buster-base-image: apt_proxy.conf
+	rm -rf "$(docker_build_dir)/$@"
+	$(docker_makefile_dir_path)/mkimage.sh -t localbuild/debian:buster $(MKIMAGE_OPTIONS) --dir "$(docker_build_dir)/$@" debootstrap --include=git,ca-certificates,procps --variant=minbase buster "$(APT_PROXY_URL)/deb.debian.org/debian"
+	docker tag localbuild/debian:buster debian:buster
 	rm -rf "$(docker_build_dir)/$@"
 
 .PHONY: build-ubuntu-cosmic-base-image
@@ -130,7 +136,7 @@ build-ubuntu-cosmic-base-image: apt_proxy.conf
 upgrade-debian-base-image: build-debian-stretch-base-image
 
 push-debian-base-image:
-	docker tag --force debian:$(docker_build_debian_version) $(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)
+	docker tag debian:$(docker_build_debian_version) $(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)
 	docker push "$(HOST_FQDN):$(docker_registry_port)/debian:$(docker_build_debian_version)"
 
 ## build {{{
@@ -173,23 +179,23 @@ build-image-openvpn:
 	# docker tag $(image_openvpn) $(image_openvpn):$(shell date +%F)
 
 push-image-openvpn:
-	docker tag --force $(image_openvpn) $(HOST_FQDN):$(docker_registry_port)/openvpn
+	docker tag $(image_openvpn) $(HOST_FQDN):$(docker_registry_port)/openvpn
 	docker push $(HOST_FQDN):$(docker_registry_port)/openvpn
 
 build-image-postgres:
 	-cd "$(conf_dir)/docker-postgres/$(docker_build_postgres_version)" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_postgres) .
-	docker tag --force $(image_postgres) $(image_postgres):$(docker_build_postgres_version)
-	# docker tag --force $(image_postgres) $(image_postgres):$(shell date +%F)
+	docker tag $(image_postgres) $(image_postgres):$(docker_build_postgres_version)
+	# docker tag $(image_postgres) $(image_postgres):$(shell date +%F)
 
 push-image-postgres:
-	docker tag --force $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres
-	docker tag --force $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)
+	docker tag $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres
+	docker tag $(image_postgres) $(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)
 	docker push $(HOST_FQDN):$(docker_registry_port)/postgres
 	docker push $(HOST_FQDN):$(docker_registry_port)/postgres:$(docker_build_postgres_version)
 
 build-image-bittorrent:
 	-cd "$(conf_dir)/docker-bittorrent" && git pull && docker build $(DOCKER_BUILD_OPTIONS) --tag $(image_bittorrent) .
-	# docker tag --force $(image_bittorrent) $(image_bittorrent):$(shell date +%F)
+	# docker tag $(image_bittorrent) $(image_bittorrent):$(shell date +%F)
 
 prefetch-packages:
 	# -cd "$(conf_dir)/apt_package_lists" && docker build $(DOCKER_BUILD_OPTIONS) .
