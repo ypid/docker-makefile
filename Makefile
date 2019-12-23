@@ -17,16 +17,8 @@ default:
 	@echo See Makefile
 
 clean: remove-all-dangling-images
-distclean: remove-old-images remove-all-dangling-images
 
 ## }}}
-
-
-remove-all-dangling-images:
-	-docker rmi --force=false $(shell docker images --quiet --filter 'dangling=true')
-
-remove-old-images:
-	docker images | grep "\s$$(date -d "-1 year" "+%Y")-" | sed --regexp-extended 's/([^ ]+)\s+([0-9-]+).*/\1:\2/' | xargs docker rmi
 
 ## Build base images {{{
 
@@ -59,7 +51,7 @@ list-docker-registry-images:
 	curl 'https://$(DOCKER_REGISTRY_SOCKET)/v2/_catalog' | jq '.repositories'
 
 tag-into-global-namespace:
-	@docker images --filter=reference='$(DOCKER_REGISTRY_PREFIX)*:*' --format '{{.Repository}}:{{.Tag}}' | while read -r ref; do \
+	@docker images --filter=reference='$(DOCKER_REGISTRY_SOCKET)/*/*:*' --format '{{.Repository}}:{{.Tag}}' | while read -r ref; do \
 		global_ref="$${ref##*/}"; \
 		echo "$$ref -> $$global_ref"; \
 		docker tag "$$ref" $$global_ref; \
@@ -69,3 +61,6 @@ push-to-registry:
 	@docker images --filter=reference='$(DOCKER_REGISTRY_PREFIX)*:*' --format '{{.Repository}}:{{.Tag}}' | while read -r ref; do \
 		docker push "$$ref"; \
 	done
+
+remove-all-dangling-images:
+	-docker rmi --force=false $(shell docker images --quiet --filter 'dangling=true')
