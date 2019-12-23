@@ -35,6 +35,7 @@ while true; do
 done
 
 script="$1"
+echo $script
 [ "$script" ] || usage
 shift
 

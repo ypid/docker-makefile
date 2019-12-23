@@ -1,1 +1,0 @@
-/usr/share/docker.io/contrib/mkimage-unittest.sh
