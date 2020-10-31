@@ -64,4 +64,4 @@ push-to-registry:
 	done
 
 remove-all-dangling-images:
-	-docker rmi --force=false $(shell docker images --quiet --filter 'dangling=true')
+	-docker image prune --force
