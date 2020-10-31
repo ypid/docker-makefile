@@ -59,7 +59,7 @@ tag-into-global-namespace:
 	done
 
 push-to-registry:
-	@docker images --filter=reference='$(DOCKER_REGISTRY_PREFIX)*:*' --format '{{.Repository}}:{{.Tag}}' | while read -r ref; do \
+	@docker images --filter=reference='$(DOCKER_REGISTRY_PREFIX)*:*' --format '{{.Repository}}:{{.Tag}}' | grep -v ':<none>$$' | while read -r ref; do \
 		docker push "$$ref"; \
 	done
 
