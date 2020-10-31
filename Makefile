@@ -5,7 +5,7 @@ SHELL ?= /bin/bash -o nounset -o pipefail -o errexit
 MKIMAGE_OPTIONS ?= --no-compression
 APT_PROXY_URL ?= $(shell apt-config dump | grep -i '^Acquire::HTTP::Proxy ' | cut '--delimiter="' --fields 2)
 DOCKER_MAKEFILE_DIR_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES ?= git,ca-certificates,procps,rename,iproute2,iputils-ping,wget
+DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES ?= wget,curl
 DOCKER_BUILD_DIR ?= /var/lib/docker-build
 DOCKER_REGISTRY_SOCKET ?=
 # DOCKER_REGISTRY_SOCKET ?= localhost:5000
