@@ -37,6 +37,7 @@ build-debian-stretch-base-image: apt_proxy.conf
 build-debian-buster-base-image: apt_proxy.conf
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 	$(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)debian:buster $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --variant=minbase buster "$(APT_PROXY_URL)/deb.debian.org/debian"
+	docker tag $(DOCKER_REGISTRY_PREFIX)debian:buster $(DOCKER_REGISTRY_PREFIX)debian:buster-slim
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 
 .PHONY: build-ubuntu-cosmic-base-image
