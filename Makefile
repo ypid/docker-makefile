@@ -1,5 +1,6 @@
-## @author Copyright (C) 2015,2019 Robin Schneider <ypid@riseup.net>
-## @license AGPL-3.0-only <https://www.gnu.org/licenses/agpl-3.0.html>
+# SPDX-FileCopyrightText: 2015,2019 Robin Schneider <ypid@riseup.net>
+#
+# SPDX-License-Identifier: AGPL-3.0-only
 
 # export PATH := debuerreotype/scripts/:$(PATH)
 
