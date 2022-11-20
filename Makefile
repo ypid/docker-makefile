@@ -7,8 +7,6 @@
 SHELL ?= /bin/bash -o nounset -o pipefail -o errexit
 MKIMAGE_OPTIONS ?= --no-compression
 APT_PROXY_URL ?= $(shell apt-config dump | grep -i '^Acquire::HTTP::Proxy ' | cut '--delimiter="' --fields 2)
-DOCKER_MAKEFILE_DIR_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES ?= wget,curl
 DOCKER_BUILD_DIR ?= /var/lib/docker-build
 DOCKER_REGISTRY_SOCKET ?=
 # DOCKER_REGISTRY_SOCKET ?= localhost:5000
@@ -30,8 +28,9 @@ clean: remove-all-dangling-images
 apt_proxy.conf:
 	apt-config dump | egrep -i '^Acquire::HTTPS?::Proxy\b' > "$@"
 
-.PHONY: build-debian-bullseye-latest-snapshot-base-image
-build-debian-bullseye-latest-snapshot-base-image: apt_proxy.conf
+# Requires https://github.com/debuerreotype/debuerreotype. 0.10-2 in Debian 11 is not sufficient (image is missing APT sources).
+.PHONY: build-debian-bullseye-snapshot-base-image
+build-debian-bullseye-snapshot-base-image: apt_proxy.conf
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 	mkdir -p "$(DOCKER_BUILD_DIR)/$@"
 	debuerreotype-init --arch amd64 --no-merged-usr --non-debian "$(DOCKER_BUILD_DIR)/$@" bullseye http://cache:3142/snapshot.debian.org/archive/debian/20221114T000000Z
@@ -41,21 +40,7 @@ build-debian-bullseye-latest-snapshot-base-image: apt_proxy.conf
 	echo 'Acquire::Check-Valid-Until "false";' > "$(DOCKER_BUILD_DIR)/$@/etc/apt/apt.conf.d/00debuerreotype_snapshot"
 	tar -cC "$(DOCKER_BUILD_DIR)/$@" . | docker import - $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
 	# ./debuerreotype/examples/debian.sh --arch amd64  'bullseye' '@1612742400'
-	# $(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)debian:bullseye $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --variant=minbase bullseye "$(APT_PROXY_URL)/deb.debian.org/debian"
-	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114-slim
-	rm -rf "$(DOCKER_BUILD_DIR)/$@"
-
-.PHONY: build-debian-bullseye-base-image
-build-debian-bullseye-base-image: apt_proxy.conf
-	rm -rf "$(DOCKER_BUILD_DIR)/$@"
-	$(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)debian:bullseye $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --variant=minbase bullseye "$(APT_PROXY_URL)/deb.debian.org/debian"
-	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye $(DOCKER_REGISTRY_PREFIX)debian:bullseye-slim
-	rm -rf "$(DOCKER_BUILD_DIR)/$@"
-
-.PHONY: build-ubuntu-cosmic-base-image
-build-ubuntu-cosmic-base-image: apt_proxy.conf
-	rm -rf "$(DOCKER_BUILD_DIR)/$@"
-	$(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)ubuntu:cosmic $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="ubuntu-minimal,$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --components=main,universe --variant=minbase cosmic "$(APT_PROXY_URL)/archive.ubuntu.com/ubuntu"
+	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221120 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221120-slim
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 
 ## }}}
