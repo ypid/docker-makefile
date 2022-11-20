@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: 2015,2019 Robin Schneider <ypid@riseup.net>
+# SPDX-FileCopyrightText: 2015,2019,2022 Robin Schneider <ypid@riseup.net>
 #
-# SPDX-License-Identifier: AGPL-3.0-only
-
-# export PATH := debuerreotype/scripts/:$(PATH)
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
 SHELL ?= /bin/bash -o nounset -o pipefail -o errexit
-MKIMAGE_OPTIONS ?= --no-compression
+MAKEFLAGS += --no-builtin-rules
+.SUFFIXES:
+
 APT_PROXY_URL ?= $(shell apt-config dump | grep -i '^Acquire::HTTP::Proxy ' | cut '--delimiter="' --fields 2)
 DOCKER_BUILD_DIR ?= /var/lib/docker-build
 DOCKER_REGISTRY_SOCKET ?=
@@ -23,25 +23,28 @@ clean: remove-all-dangling-images
 
 ## Build base images {{{
 
-.PHONY: apt_proxy.conf FORCE_MAKE
-
 apt_proxy.conf:
 	apt-config dump | egrep -i '^Acquire::HTTPS?::Proxy\b' > "$@"
 
 # Requires https://github.com/debuerreotype/debuerreotype. 0.10-2 in Debian 11 is not sufficient (image is missing APT sources).
+# To get the latest timestamp check https://docker.debian.net/ (quicker than https://hub.docker.com/_/debian/tags)
+$(DOCKER_BUILD_DIR)/20221114/: apt_proxy.conf
+	mkdir -p "$@"
+
+	~/src/debuerreotype/debuerreotype/examples/debian.sh "$@/.." bullseye 2022-11-14T00:00:00Z
+	docker import "$@/amd64/bullseye/rootfs.tar.xz" $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
+	echo "FROM $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114" > Dockerfile
+	# echo 'Acquire::Check-Valid-Until "false";' > "./etc/apt/apt.conf.d/00debuerreotype_snapshot"
+	echo "ADD apt_proxy.conf /etc/apt/apt.conf" >> Dockerfile
+	docker build . --tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
+
+	# This is technically wrong. debuerreotype even builds a slim. I still just use the full as slim to save push/pull time.
+	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114-slim
+
+	rm -rf Dockerfile
+
 .PHONY: build-debian-bullseye-snapshot-base-image
-build-debian-bullseye-snapshot-base-image: apt_proxy.conf
-	rm -rf "$(DOCKER_BUILD_DIR)/$@"
-	mkdir -p "$(DOCKER_BUILD_DIR)/$@"
-	debuerreotype-init --arch amd64 --no-merged-usr --non-debian "$(DOCKER_BUILD_DIR)/$@" bullseye http://cache:3142/snapshot.debian.org/archive/debian/20221114T000000Z
-	debuerreotype-minimizing-config "$(DOCKER_BUILD_DIR)/$@"
-	debuerreotype-debian-sources-list --snapshot "$(DOCKER_BUILD_DIR)/$@" bullseye
-	cp apt_proxy.conf "$(DOCKER_BUILD_DIR)/$@/etc/apt/apt.conf.d/apt.conf"
-	echo 'Acquire::Check-Valid-Until "false";' > "$(DOCKER_BUILD_DIR)/$@/etc/apt/apt.conf.d/00debuerreotype_snapshot"
-	tar -cC "$(DOCKER_BUILD_DIR)/$@" . | docker import - $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
-	# ./debuerreotype/examples/debian.sh --arch amd64  'bullseye' '@1612742400'
-	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221120 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221120-slim
-	rm -rf "$(DOCKER_BUILD_DIR)/$@"
+build-debian-bullseye-snapshot-base-image: $(DOCKER_BUILD_DIR)/20221114/
 
 ## }}}
 
