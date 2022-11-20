@@ -57,6 +57,13 @@ build-debian-buster-latest-snapshot-base-image: apt_proxy.conf
 	docker tag $(DOCKER_REGISTRY_PREFIX)debian:buster-20210621 $(DOCKER_REGISTRY_PREFIX)debian:buster-20210621-slim
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 
+.PHONY: build-debian-bullseye-base-image
+build-debian-bullseye-base-image: apt_proxy.conf
+	rm -rf "$(DOCKER_BUILD_DIR)/$@"
+	$(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)debian:bullseye $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --variant=minbase bullseye "$(APT_PROXY_URL)/deb.debian.org/debian"
+	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye $(DOCKER_REGISTRY_PREFIX)debian:bullseye-slim
+	rm -rf "$(DOCKER_BUILD_DIR)/$@"
+
 .PHONY: build-ubuntu-cosmic-base-image
 build-ubuntu-cosmic-base-image: apt_proxy.conf
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
