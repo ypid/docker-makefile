@@ -30,19 +30,19 @@ clean: remove-all-dangling-images
 apt_proxy.conf:
 	apt-config dump | egrep -i '^Acquire::HTTPS?::Proxy\b' > "$@"
 
-.PHONY: build-debian-buster-latest-snapshot-base-image
-build-debian-buster-latest-snapshot-base-image: apt_proxy.conf
+.PHONY: build-debian-bullseye-latest-snapshot-base-image
+build-debian-bullseye-latest-snapshot-base-image: apt_proxy.conf
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 	mkdir -p "$(DOCKER_BUILD_DIR)/$@"
-	debuerreotype-init --arch amd64 --no-merged-usr --non-debian "$(DOCKER_BUILD_DIR)/$@" buster http://cache:3142/snapshot.debian.org/archive/debian/20210621T212047Z
+	debuerreotype-init --arch amd64 --no-merged-usr --non-debian "$(DOCKER_BUILD_DIR)/$@" bullseye http://cache:3142/snapshot.debian.org/archive/debian/20221114T000000Z
 	debuerreotype-minimizing-config "$(DOCKER_BUILD_DIR)/$@"
-	debuerreotype-debian-sources-list --snapshot "$(DOCKER_BUILD_DIR)/$@" buster
+	debuerreotype-debian-sources-list --snapshot "$(DOCKER_BUILD_DIR)/$@" bullseye
 	cp apt_proxy.conf "$(DOCKER_BUILD_DIR)/$@/etc/apt/apt.conf.d/apt.conf"
 	echo 'Acquire::Check-Valid-Until "false";' > "$(DOCKER_BUILD_DIR)/$@/etc/apt/apt.conf.d/00debuerreotype_snapshot"
-	tar -cC "$(DOCKER_BUILD_DIR)/$@" . | docker import - $(DOCKER_REGISTRY_PREFIX)debian:buster-20210621
-	# ./debuerreotype/examples/debian.sh --arch amd64  'buster' '@1612742400'
-	# $(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)debian:buster $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --variant=minbase buster "$(APT_PROXY_URL)/deb.debian.org/debian"
-	docker tag $(DOCKER_REGISTRY_PREFIX)debian:buster-20210621 $(DOCKER_REGISTRY_PREFIX)debian:buster-20210621-slim
+	tar -cC "$(DOCKER_BUILD_DIR)/$@" . | docker import - $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
+	# ./debuerreotype/examples/debian.sh --arch amd64  'bullseye' '@1612742400'
+	# $(DOCKER_MAKEFILE_DIR_PATH)/mkimage.sh -t $(DOCKER_REGISTRY_PREFIX)debian:bullseye $(MKIMAGE_OPTIONS) --dir "$(DOCKER_BUILD_DIR)/$@" debootstrap --include="$(DOCKER_BUILD_DEBIAN_ADDITIONAL_PACKAGES)" --variant=minbase bullseye "$(APT_PROXY_URL)/deb.debian.org/debian"
+	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114-slim
 	rm -rf "$(DOCKER_BUILD_DIR)/$@"
 
 .PHONY: build-debian-bullseye-base-image
