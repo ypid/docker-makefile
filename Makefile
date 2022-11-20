@@ -7,11 +7,13 @@ MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
 APT_PROXY_URL ?= $(shell apt-config dump | grep -i '^Acquire::HTTP::Proxy ' | cut '--delimiter="' --fields 2)
+DOCKER_MAKEFILE_DIR_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 DOCKER_BUILD_DIR ?= /var/lib/docker-build
 DOCKER_REGISTRY_SOCKET ?=
 # DOCKER_REGISTRY_SOCKET ?= localhost:5000
 DOCKER_REGISTRY_PREFIX ?= $(DOCKER_REGISTRY_SOCKET)/
 
+export PATH := $(DOCKER_MAKEFILE_DIR_PATH)/debuerreotype/scripts:$(PATH)
 
 ## Common targets {{{
 default:
@@ -29,9 +31,7 @@ apt_proxy.conf:
 # Requires https://github.com/debuerreotype/debuerreotype. 0.10-2 in Debian 11 is not sufficient (image is missing APT sources).
 # To get the latest timestamp check https://docker.debian.net/ (quicker than https://hub.docker.com/_/debian/tags)
 $(DOCKER_BUILD_DIR)/20221114/: apt_proxy.conf
-	mkdir -p "$@"
-
-	~/src/debuerreotype/debuerreotype/examples/debian.sh "$@/.." bullseye 2022-11-14T00:00:00Z
+	$(DOCKER_MAKEFILE_DIR_PATH)/debuerreotype/examples/debian.sh "$(shell dirname "$@")" bullseye 2022-11-14T00:00:00Z
 	docker import "$@/amd64/bullseye/rootfs.tar.xz" $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
 	echo "FROM $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114" > Dockerfile
 	# echo 'Acquire::Check-Valid-Until "false";' > "./etc/apt/apt.conf.d/00debuerreotype_snapshot"

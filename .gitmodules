@@ -1,0 +1,3 @@
+[submodule "debuerreotype"]
+	path = debuerreotype
+	url = https://github.com/debuerreotype/debuerreotype.git
