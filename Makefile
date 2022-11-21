@@ -34,7 +34,6 @@ $(DOCKER_BUILD_DIR)/20221114/: apt_proxy.conf
 	$(DOCKER_MAKEFILE_DIR_PATH)/debuerreotype/examples/debian.sh "$(shell dirname "$@")" bullseye 2022-11-14T00:00:00Z
 	docker import "$@/amd64/bullseye/rootfs.tar.xz" $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
 	echo "FROM $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114" > Dockerfile
-	# echo 'Acquire::Check-Valid-Until "false";' > "./etc/apt/apt.conf.d/00debuerreotype_snapshot"
 	echo "ADD apt_proxy.conf /etc/apt/apt.conf" >> Dockerfile
 	docker build . --tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
 
