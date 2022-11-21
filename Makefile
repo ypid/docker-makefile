@@ -2,7 +2,8 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-SHELL ?= /bin/bash -o nounset -o pipefail -o errexit
+SHELL = /bin/bash
+.ONESHELL:
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
@@ -12,6 +13,7 @@ DOCKER_BUILD_DIR ?= /var/lib/docker-build
 DOCKER_REGISTRY_SOCKET ?=
 # DOCKER_REGISTRY_SOCKET ?= localhost:5000
 DOCKER_REGISTRY_PREFIX ?= $(DOCKER_REGISTRY_SOCKET)/
+ARCH ?= $(shell dpkg --print-architecture)
 
 export PATH := $(DOCKER_MAKEFILE_DIR_PATH)/debuerreotype/scripts:$(PATH)
 
@@ -29,21 +31,33 @@ apt_proxy.conf:
 	apt-config dump | egrep -i '^Acquire::HTTPS?::Proxy\b' > "$@"
 
 # Requires https://github.com/debuerreotype/debuerreotype. 0.10-2 in Debian 11 is not sufficient (image is missing APT sources).
-# To get the latest timestamp check https://docker.debian.net/ (quicker than https://hub.docker.com/_/debian/tags)
-$(DOCKER_BUILD_DIR)/20221114/: apt_proxy.conf
-	$(DOCKER_MAKEFILE_DIR_PATH)/debuerreotype/examples/debian.sh "$(shell dirname "$@")" bullseye 2022-11-14T00:00:00Z
-	docker import "$@/amd64/bullseye/rootfs.tar.xz" $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
-	echo "FROM $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114" > Dockerfile
+$(DOCKER_BUILD_DIR)/%/.done: apt_proxy.conf
+	@set -o nounset -o pipefail -o errexit
+	yyyymmdd="$$(echo $@ | sed -E 's/.*([0-9]{8}).*/\1/;')"
+	yyyy_dd_mm="$$(echo $@ | sed -E 's/.*([0-9]{4})([0-9]{2})([0-9]{2}).*/\1-\2-\3/;')"
+	distro_codename="$(*F)"
+	arch="$$(echo $@ | sed -E 's#.*[0-9]{8}/([^/]+)/.*#\1#;')"
+	set -o xtrace
+
+	rm "$(@D)" -rf
+	$(DOCKER_MAKEFILE_DIR_PATH)/debuerreotype/examples/debian.sh --arch="$${arch}" "$(DOCKER_BUILD_DIR)" "$${distro_codename}" "$${yyyy_dd_mm}T00:00:00Z"
+
+	docker import "$(@D)/rootfs.tar.xz" "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}"
+	echo "FROM $(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}" > Dockerfile
 	echo "ADD apt_proxy.conf /etc/apt/apt.conf" >> Dockerfile
-	docker build . --tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
+	docker build . --tag "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}"
+	docker tag "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}" "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}"
 
 	# This is technically wrong. debuerreotype even builds a slim variant. I still just use the full as slim to save push/pull time.
-	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114-slim
+	docker tag "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}" "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}-slim"
+	docker tag "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-$${yyyymmdd}" "$(DOCKER_REGISTRY_PREFIX)debian:$${distro_codename}-slim"
 
 	rm -rf Dockerfile
+	touch "$@"
 
+# To get the latest timestamp check https://docker.debian.net/ (quicker than https://hub.docker.com/_/debian/tags)
 .PHONY: build-debian-bullseye-snapshot-base-image
-build-debian-bullseye-snapshot-base-image: $(DOCKER_BUILD_DIR)/20221114/
+build-debian-bullseye-snapshot-base-image: $(DOCKER_BUILD_DIR)/20221114/$(ARCH)/bullseye/.done
 
 ## }}}
 
