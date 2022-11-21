@@ -37,7 +37,7 @@ $(DOCKER_BUILD_DIR)/20221114/: apt_proxy.conf
 	echo "ADD apt_proxy.conf /etc/apt/apt.conf" >> Dockerfile
 	docker build . --tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114
 
-	# This is technically wrong. debuerreotype even builds a slim. I still just use the full as slim to save push/pull time.
+	# This is technically wrong. debuerreotype even builds a slim variant. I still just use the full as slim to save push/pull time.
 	docker tag $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114 $(DOCKER_REGISTRY_PREFIX)debian:bullseye-20221114-slim
 
 	rm -rf Dockerfile
